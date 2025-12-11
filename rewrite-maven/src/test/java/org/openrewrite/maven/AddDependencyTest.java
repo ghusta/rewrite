@@ -703,6 +703,37 @@ class AddDependencyTest implements RewriteTest {
         );
     }
 
+    @Issue("https://github.com/openrewrite/rewrite/issues/TODO")
+    @Test
+    void addDependencyDoesntAddWhenExistingDependencyScopeRuntime() {
+        rewriteRun(
+          spec -> spec.recipe(addDependency("com.google.guava:guava:29.0-jre")),
+          mavenProject(
+            "project",
+            srcMainJava(
+              java(usingGuavaIntMath)
+            ),
+            pomXml(
+              """
+                    <project>
+                        <groupId>com.mycompany.app</groupId>
+                        <artifactId>my-app</artifactId>
+                        <version>1</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.google.guava</groupId>
+                                <artifactId>guava</artifactId>
+                                <version>28.0-jre</version>
+                                <scope>runtime</scope>
+                            </dependency>
+                        </dependencies>
+                    </project>
+                """
+            )
+          )
+        );
+    }
+
     @Issue("https://github.com/openrewrite/rewrite/issues/3458")
     @Test
     void addDependencyOopsAllComments() {
@@ -1160,6 +1191,48 @@ class AddDependencyTest implements RewriteTest {
                                 <artifactId>guava</artifactId>
                                 <version>29.0-jre</version>
                                 <scope>test</scope>
+                            </dependency>
+                        </dependencies>
+                    </project>
+                """
+            )
+          )
+        );
+    }
+
+    @Test
+    void rawVisitorDoesNotDuplicateHavingScopeRuntime() {
+        rewriteRun(
+          spec -> spec.recipe(
+            toRecipe()
+              .withDisplayName("Add dependency")
+              .withName("Uses AddDependencyVisitor directly to validate that it will not add a dependency multiple times")
+              .withGetVisitor(() -> new AddDependencyVisitor(
+                "com.google.guava",
+                "guava",
+                "29.0-jre",
+                null,
+                "compile",
+                null,
+                null,
+                null,
+                null,
+                null
+              ))
+          ),
+          mavenProject("project",
+            pomXml(
+              """
+                    <project>
+                        <groupId>com.mycompany.app</groupId>
+                        <artifactId>my-app</artifactId>
+                        <version>1</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.google.guava</groupId>
+                                <artifactId>guava</artifactId>
+                                <version>29.0-jre</version>
+                                <scope>runtime</scope>
                             </dependency>
                         </dependencies>
                     </project>
